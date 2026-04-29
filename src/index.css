@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Navy Background - #0b132b */
+    --background: 225 60% 11%;
+    --foreground: 210 40% 98%;
+
+    /* Slightly lighter Navy for Cards - #1c2541 */
+    --card: 225 40% 18%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 225 40% 18%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Night Vision Green - #4ade80 */
+    --primary: 142 71% 45%;
+    --primary-foreground: 144 100% 11%;
+
+    /* Soft Purple - #a78bfa */
+    --secondary: 255 92% 76%;
+    --secondary-foreground: 255 100% 15%;
+
+    /* Muted colors */
+    --muted: 217 33% 25%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Gold/Yellow accent - #fbbf24 */
+    --accent: 43 96% 56%;
+    --accent-foreground: 43 100% 15%;
+
+    /* Red for destructive - #ef4444 */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 25%;
+    --input: 217 33% 25%;
+    --ring: 142 71% 45%;
+
+    --radius: 0.75rem;
+
+    /* Fonts - Hebrew friendly */
+    --font-heebo: 'Heebo', 'Rubik', 'Assistant', sans-serif;
+  }
+
+  body {
+    direction: rtl;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-heebo);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
