@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import theme from '../theme';
+import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { Plus, Trash2, Check, X, ShieldAlert, KeyRound, Mail } from 'lucide-react';
 
 export default function Admin({ isAdmin, user }) {
+  const navigate = useNavigate();
   const [formTypes, setFormTypes] = useState([]);
   const [posts, setPosts] = useState([]);
   const [frameworks, setFrameworks] = useState([]);
@@ -48,6 +50,7 @@ export default function Admin({ isAdmin, user }) {
     setLoginError('');
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
     } catch (error) {
       console.error('Login failed', error);
       setLoginError('התחברות נכשלה. בדוק אימייל וסיסמא או שאין לך הרשאה במערכת.');

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import theme from '../theme';
 import { db } from '../firebase';
 import { collection, getDocs, query, orderBy, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { Search, Edit2, Trash2, Share2, X, FileText, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { Search, Edit2, Trash2, Share2, X, FileText, ChevronDown, ChevronUp, Save, Download } from 'lucide-react';
 
 export default function Records() {
   const [records, setRecords] = useState([]);
@@ -64,6 +64,34 @@ ${r.jointForces && r.jointForcesDetails ? `*פירוט כוח:* ${r.jointForcesD
 ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPreservation.map((p, i) => `${i+1}. ${p}`).join('\n')}\n\n` : ''}${filledImprovement.length > 0 ? `🔧 *נקודות לשיפור:*\n${filledImprovement.map((p, i) => `${i+1}. ${p}`).join('\n')}\n\n` : ''}${r.freeComments ? `📝 *הערות נוספות:*\n${r.freeComments}` : ''}`;
     const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
     window.open(waUrl, '_blank');
+  };
+
+  const handleExportCSV = () => {
+    if (filteredRecords.length === 0) return;
+    
+    const headers = ['תאריך', 'שעה', 'תצפיתנית', 'חונכת', 'עמדה', 'סוג תרגול', 'מתווה', 'נקודות לשימור', 'נקודות לשיפור', 'הערות'];
+    const rows = filteredRecords.map(r => [
+      r.date,
+      r.time,
+      r.traineeName,
+      r.tutorName || '',
+      r.observationPostName,
+      r.practiceType || '',
+      `"${(r.exerciseOutline || '').replace(/"/g, '""')}"`,
+      `"${(r.preservationPoints || []).join(' ; ').replace(/"/g, '""')}"`,
+      `"${(r.improvementPoints || []).join(' ; ').replace(/"/g, '""')}"`,
+      `"${(r.freeComments || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(e => e.join(','))].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `observation_owl_records_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const startEdit = (r) => {
@@ -160,6 +188,16 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
         <Search className="absolute left-3 top-2.5 text-muted-foreground w-5 h-5" />
       </div>
 
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-sm font-bold opacity-70">רשימת דיווחים ({filteredRecords.length})</h3>
+        <button 
+          onClick={handleExportCSV} 
+          className="flex items-center gap-1 text-xs bg-primary/10 text-primary px-3 py-1.5 rounded-lg border border-primary/20 hover:bg-primary/20 transition-colors"
+        >
+          <Download size={14} /> ייצוא CSV
+        </button>
+      </div>
+
       <div className="grid grid-cols-3 gap-2 mb-6">
         <select value={traineeFilter} onChange={e => setTraineeFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
           <option value="">כל המתורגלות</option>
@@ -185,26 +223,21 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
               <div key={r.id} className={theme.card.base + " p-0 overflow-hidden"}>
                 {/* Header */}
                 <div 
-                  className="p-4 flex flex-col gap-2 cursor-pointer bg-card hover:bg-muted/10 transition-colors"
+                  className="p-3 flex items-center justify-between cursor-pointer bg-card hover:bg-muted/10 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : r.id)}
                 >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-bold text-foreground text-base">{r.traineeName}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={theme.badge.post}>{r.observationPostName}</span>
-                        <span className={theme.badge.formType}>{r.formTypeName}</span>
+                  <div className="flex flex-1 items-center gap-3 min-w-0">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-foreground text-sm truncate">{r.traineeName}</h3>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[10px] text-muted-foreground">{r.date}</span>
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm">{r.observationPostName}</span>
                       </div>
                     </div>
-                    <div className="text-left">
-                      <p className="text-xs text-muted-foreground">{r.date}</p>
-                      <p className="text-xs text-muted-foreground font-medium">{r.time}</p>
-                    </div>
+                    <p className="text-[11px] text-muted-foreground truncate hidden sm:block max-w-[40%]">{r.exerciseOutline}</p>
                   </div>
-                  
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-sm text-muted-foreground line-clamp-1 flex-1">{r.exerciseOutline}</p>
-                    {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground ml-2" /> : <ChevronDown className="w-5 h-5 text-muted-foreground ml-2" />}
+                  <div className="flex items-center gap-2">
+                    {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                   </div>
                 </div>
 

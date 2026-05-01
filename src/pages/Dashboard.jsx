@@ -334,7 +334,7 @@ ${recentImprovements.length > 0 ? `• נקודות לשיפור חוזרות: $
             </ul>
           </div>
 
-          <button onClick={handleExportWA} className={theme.button.primary + " w-full h-12 sticky bottom-24 shadow-lg"}>
+          <button onClick={handleExportWA} className={theme.button.primary + " w-full h-12 shadow-lg mt-4"}>
             <Share2 className="ml-2" size={20} /> ייצוא נתונים לוואטסאפ
           </button>
         </div>

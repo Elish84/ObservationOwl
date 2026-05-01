@@ -184,7 +184,7 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
               onClick={() => window.open(success.waUrl, '_blank')}
               className={theme.button.primary + " w-full h-14 text-lg"}
             >
-              <Send size={24} /> שליחה לוואטסאפ שוב
+              <Send size={24} /> שליחה לוואטסאפ
             </button>
             
             <button 
@@ -346,7 +346,7 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
             <textarea value={formData.freeComments} onChange={e => handleChange('freeComments', e.target.value)} className={theme.input.textarea} />
           </div>
 
-          <button type="submit" disabled={isSubmitting} className={theme.button.primary + " mt-6 sticky bottom-24 z-10"}>
+          <button type="submit" disabled={isSubmitting} className={theme.button.primary + " mt-8 w-full h-14"}>
             <Send size={20} />
             {isSubmitting ? 'שומר...' : 'שמירה ויציאה ל-WhatsApp'}
           </button>
