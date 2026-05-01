@@ -3,7 +3,7 @@ import theme from '../theme';
 import { db } from '../firebase';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { Activity, Target, Shield, Users, Crosshair, AlertTriangle, Calendar } from 'lucide-react';
+import { Activity, Target, Shield, Users, Crosshair, AlertTriangle, Calendar, Share2 } from 'lucide-react';
 
 export default function Dashboard() {
   const [records, setRecords] = useState([]);
@@ -15,6 +15,9 @@ export default function Dashboard() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [useCustomDates, setUseCustomDates] = useState(false);
+  const [traineeFilter, setTraineeFilter] = useState('');
+  const [postFilter, setPostFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,20 +38,36 @@ export default function Dashboard() {
   }, []);
 
   const getFilteredRecords = () => {
+    let filtered = records;
+    
+    // Date Filtering
     if (useCustomDates && fromDate && toDate) {
       const start = new Date(fromDate);
       start.setHours(0, 0, 0, 0);
       const end = new Date(toDate);
       end.setHours(23, 59, 59, 999);
-      return records.filter(r => {
+      filtered = filtered.filter(r => {
         const rDate = new Date(r.date);
         return rDate >= start && rDate <= end;
       });
     } else {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - daysFilter);
-      return records.filter(r => new Date(r.date) >= cutoff);
+      filtered = filtered.filter(r => new Date(r.date) >= cutoff);
     }
+
+    // Additional Filters
+    if (traineeFilter) {
+      filtered = filtered.filter(r => r.traineeName === traineeFilter);
+    }
+    if (postFilter) {
+      filtered = filtered.filter(r => r.observationPostName === postFilter);
+    }
+    if (typeFilter) {
+      filtered = filtered.filter(r => r.practiceType === typeFilter);
+    }
+
+    return filtered;
   };
 
   const filtered = getFilteredRecords();
@@ -98,6 +117,42 @@ export default function Dashboard() {
     setDaysFilter(days);
   };
 
+  const handleExportWA = () => {
+    const total = filtered.length;
+    if (total === 0) return;
+
+    const topPost = mostTrainedPost;
+    const topTrainee = traineeData[0]?.name || 'אין';
+    
+    const text = `🦉 *סיכום דשבורד ינשוף* 🦉
+    
+📅 *תקופה:* ${useCustomDates ? `${fromDate} עד ${toDate}` : `${daysFilter} הימים האחרונים`}
+📈 *סה"כ תרגולים:* ${total}
+📍 *עמדה מובילה:* ${topPost} (${postCounts[topPost] || 0} תרגולים)
+👤 *תצפיתנית מובילה:* ${topTrainee} (${traineeData[0]?.total || 0} תרגולים)
+🤝 *כוחות משולבים:* ${jointForcesPct}%
+🎭 *ביום אויב:* ${enemySimPct}%
+
+🔍 *דגשים עיקריים:*
+${recentImprovements.length > 0 ? `• נקודות לשיפור חוזרות: ${recentImprovements.join(', ')}` : '• אין דגשים מיוחדים כרגע'}
+
+הופק ע"י מערכת ינשוף 🦉`;
+
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank');
+  };
+
+  // Trainee chart data
+  const traineeCounts = filtered.reduce((acc, r) => {
+    acc[r.traineeName] = (acc[r.traineeName] || 0) + 1;
+    return acc;
+  }, {});
+  const traineeData = Object.keys(traineeCounts).map(k => ({ name: k, total: traineeCounts[k] })).sort((a,b) => b.total - a.total).slice(0, 10);
+
+  const uniqueTrainees = [...new Set(records.map(r => r.traineeName))].filter(Boolean).sort();
+  const uniquePosts = [...new Set(records.map(r => r.observationPostName))].filter(Boolean).sort();
+  const uniqueTypes = [...new Set(records.map(r => r.practiceType))].filter(Boolean).sort();
+
   return (
     <div className={theme.page.wrapper}>
       <h2 className={theme.page.title}>📊 דשבורד מפקדים</h2>
@@ -124,7 +179,7 @@ export default function Dashboard() {
         </div>
         
         {useCustomDates && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-3">
             <div className="flex-1 space-y-1">
               <label className="text-[10px] text-muted-foreground">מתאריך</label>
               <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className={theme.input.base + " py-1 text-xs"} />
@@ -135,6 +190,21 @@ export default function Dashboard() {
             </div>
           </div>
         )}
+
+        <div className="grid grid-cols-3 gap-2">
+          <select value={traineeFilter} onChange={e => setTraineeFilter(e.target.value)} className={theme.input.select + " py-1 text-[10px]"}>
+            <option value="">כל המתורגלות</option>
+            {uniqueTrainees.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={postFilter} onChange={e => setPostFilter(e.target.value)} className={theme.input.select + " py-1 text-[10px]"}>
+            <option value="">כל העמדות</option>
+            {uniquePosts.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className={theme.input.select + " py-1 text-[10px]"}>
+            <option value="">כל הסוגים</option>
+            {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -212,6 +282,20 @@ export default function Dashboard() {
           </div>
 
           <div className={theme.card.base + " p-4"}>
+            <h3 className="font-bold mb-4 text-sm text-center">תרגולים לפי תצפיתנית</h3>
+            <div className="h-64" dir="ltr">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={traineeData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+                  <XAxis type="number" hide />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: '#888' }} width={80} />
+                  <Tooltip contentStyle={{ backgroundColor: '#1c2541', border: 'none', borderRadius: '8px', color: '#fff' }} />
+                  <Bar dataKey="total" fill="#a78bfa" radius={[0, 4, 4, 0]} label={{ position: 'right', fill: '#ccc', fontSize: 10 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className={theme.card.base + " p-4"}>
             <h3 className="font-bold mb-4 text-sm">סוגי תרגול</h3>
             <div className="h-48" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
@@ -250,6 +334,9 @@ export default function Dashboard() {
             </ul>
           </div>
 
+          <button onClick={handleExportWA} className={theme.button.primary + " w-full h-12 sticky bottom-24 shadow-lg"}>
+            <Share2 className="ml-2" size={20} /> ייצוא נתונים לוואטסאפ
+          </button>
         </div>
       )}
     </div>

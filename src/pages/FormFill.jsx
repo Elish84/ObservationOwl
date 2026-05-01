@@ -35,7 +35,7 @@ export default function FormFill() {
   const [posts, setPosts] = useState([]);
   const [frameworks, setFrameworks] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState(null); // stores { text, waUrl }
 
   useEffect(() => {
     // Fetch active form types and posts
@@ -125,40 +125,8 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
 
       const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
       
-      setSuccess(true);
+      setSuccess({ text, waUrl });
       window.open(waUrl, '_blank');
-
-      // Reset form
-      setTimeout(() => {
-        setFormData({
-          date: new Date().toISOString().split('T')[0],
-          time: new Date().toTimeString().split(' ')[0].slice(0, 5),
-          practiceType: '',
-          tutorName: '',
-          traineeName: '',
-          observationPost: '',
-          additionalObservationPost: '',
-          exerciseOutline: '',
-          metrics: {
-            'התמצאות והזדטרות': 'לא רלוונטי',
-            'איכות הכוונת הכוח (כיוונים , רדיפות)': 'לא רלוונטי',
-            'תקשורת מול הכוח (רציפות ואיכות)': 'לא רלוונטי',
-            'הכרת המרחב': 'לא רלוונטי',
-            'עבודה נכונה עם האמצעי': 'לא רלוונטי',
-            'שת"פ עם עמדות נוספות': 'לא רלוונטי'
-          },
-          jointForces: false,
-          jointForcesFramework: '',
-          jointForcesDetails: '',
-          enemySimulation: false,
-          laserPointerUsage: false,
-          preservationPoints: ['', '', ''],
-          improvementPoints: ['', '', ''],
-          freeComments: ''
-        });
-        setSuccess(false);
-        window.scrollTo(0,0);
-      }, 3000);
 
     } catch (err) {
       console.error("Error saving form", err);
@@ -202,10 +170,59 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
       <h2 className={theme.page.title}>🦉 מילוי סיכום תרגול תצפית</h2>
       
       {success ? (
-        <div className="flex flex-col items-center justify-center p-10 bg-primary/20 rounded-xl text-primary mt-10">
-          <CheckCircle2 size={64} className="mb-4" />
-          <h3 className="text-xl font-bold">הטופס נשמר בהצלחה!</h3>
-          <p className="text-sm opacity-80 text-center mt-2">פותח את וואטסאפ...</p>
+        <div className="flex flex-col items-center justify-center p-8 bg-card rounded-xl border-2 border-primary/20 shadow-xl mt-10 space-y-6">
+          <div className="bg-primary/10 p-4 rounded-full">
+            <CheckCircle2 size={64} className="text-primary" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-2xl font-bold text-foreground">הטופס נשמר בהצלחה!</h3>
+            <p className="text-muted-foreground mt-2">הנתונים נשמרו במערכת.</p>
+          </div>
+          
+          <div className="w-full space-y-3">
+            <button 
+              onClick={() => window.open(success.waUrl, '_blank')}
+              className={theme.button.primary + " w-full h-14 text-lg"}
+            >
+              <Send size={24} /> שליחה לוואטסאפ שוב
+            </button>
+            
+            <button 
+              onClick={() => {
+                setFormData({
+                  date: new Date().toISOString().split('T')[0],
+                  time: new Date().toTimeString().split(' ')[0].slice(0, 5),
+                  practiceType: '',
+                  tutorName: '',
+                  traineeName: '',
+                  observationPost: '',
+                  additionalObservationPost: '',
+                  exerciseOutline: '',
+                  metrics: {
+                    'התמצאות והזדטרות': 'לא רלוונטי',
+                    'איכות הכוונת הכוח (כיוונים , רדיפות)': 'לא רלוונטי',
+                    'תקשורת מול הכוח (רציפות ואיכות)': 'לא רלוונטי',
+                    'הכרת המרחב': 'לא רלוונטי',
+                    'עבודה נכונה עם האמצעי': 'לא רלוונטי',
+                    'שת"פ עם עמדות נוספות': 'לא רלוונטי'
+                  },
+                  jointForces: false,
+                  jointForcesFramework: '',
+                  jointForcesDetails: '',
+                  enemySimulation: false,
+                  laserPointerUsage: false,
+                  preservationPoints: ['', '', ''],
+                  improvementPoints: ['', '', ''],
+                  freeComments: ''
+                });
+                setSuccess(null);
+                window.scrollTo(0,0);
+              }}
+              className={theme.button.ghost + " w-full h-12 bg-muted/30"}
+            >
+              מילוי טופס חדש
+            </button>
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">

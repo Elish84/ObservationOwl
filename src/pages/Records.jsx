@@ -9,6 +9,9 @@ export default function Records() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [traineeFilter, setTraineeFilter] = useState('');
+  const [postFilter, setPostFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   
   // Edit State
   const [editingRecord, setEditingRecord] = useState(null);
@@ -25,6 +28,10 @@ export default function Records() {
     }
     setLoading(false);
   };
+
+  const uniqueTrainees = [...new Set(records.map(r => r.traineeName))].filter(Boolean).sort();
+  const uniquePosts = [...new Set(records.map(r => r.observationPostName))].filter(Boolean).sort();
+  const uniqueTypes = [...new Set(records.map(r => r.practiceType))].filter(Boolean).sort();
 
   useEffect(() => {
     fetchRecords();
@@ -81,12 +88,17 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
 
   const filteredRecords = records.filter(r => {
     const term = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       (r.traineeName || '').toLowerCase().includes(term) ||
       (r.observationPostName || '').toLowerCase().includes(term) ||
       (r.formTypeName || '').toLowerCase().includes(term) ||
       (r.date || '').includes(term)
     );
+    const matchesTrainee = traineeFilter ? r.traineeName === traineeFilter : true;
+    const matchesPost = postFilter ? r.observationPostName === postFilter : true;
+    const matchesType = typeFilter ? r.practiceType === typeFilter : true;
+    
+    return matchesSearch && matchesTrainee && matchesPost && matchesType;
   });
 
   if (editingRecord && editData) {
@@ -146,6 +158,21 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
           className={theme.input.base + " pl-10"}
         />
         <Search className="absolute left-3 top-2.5 text-muted-foreground w-5 h-5" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 mb-6">
+        <select value={traineeFilter} onChange={e => setTraineeFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
+          <option value="">כל המתורגלות</option>
+          {uniqueTrainees.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <select value={postFilter} onChange={e => setPostFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
+          <option value="">כל העמדות</option>
+          {uniquePosts.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
+          <option value="">כל הסוגים</option>
+          {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
       </div>
 
       {loading ? (

@@ -1,13 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import theme from '../theme';
-import { functions } from '../firebase';
+import { functions, db } from '../firebase';
 import { httpsCallable } from 'firebase/functions';
+import { collection, getDocs } from 'firebase/firestore';
 import { MessageSquare, Send, Sparkles, Bird, Share2 } from 'lucide-react';
 
 export default function AskOwl() {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
+  const [records, setRecords] = useState([]);
+  
+  // Filters
+  const [traineeFilter, setTraineeFilter] = useState('');
+  const [postFilter, setPostFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [customContext, setCustomContext] = useState('');
+
+  useEffect(() => {
+    const fetchMeta = async () => {
+      const snap = await getDocs(collection(db, 'observationTrainingReports'));
+      setRecords(snap.docs.map(d => d.data()));
+    };
+    fetchMeta();
+  }, []);
+
+  const uniqueTrainees = [...new Set(records.map(r => r.traineeName))].filter(Boolean).sort();
+  const uniquePosts = [...new Set(records.map(r => r.observationPostName))].filter(Boolean).sort();
+  const uniqueTypes = [...new Set(records.map(r => r.practiceType))].filter(Boolean).sort();
 
   const chips = [
     "מה הנקודות לשיפור שחוזרות הכי הרבה?",
@@ -27,7 +47,15 @@ export default function AskOwl() {
 
     try {
       const askOwlFn = httpsCallable(functions, 'askOwl');
-      const result = await askOwlFn({ question: textToAsk, filters: {} });
+      const result = await askOwlFn({ 
+        question: textToAsk, 
+        filters: {
+          trainee: traineeFilter,
+          post: postFilter,
+          type: typeFilter,
+          customContext: customContext
+        } 
+      });
       if (result.data.error) {
         setAnswer(result.data.error);
       } else {
@@ -53,6 +81,34 @@ export default function AskOwl() {
       <p className="text-sm text-center text-muted-foreground mb-6">
         הינשוף כאן כדי לעזור לך לנתח את מגמות התרגולים, להפיק לקחים ולייעל את משמרות התצפית.
       </p>
+
+      {/* Filters UI */}
+      <div className="bg-card p-4 rounded-xl border border-border shadow-sm mb-6 space-y-3">
+        <h4 className="text-xs font-bold text-secondary flex items-center gap-2">
+          <Sparkles size={14}/> סינון מידע לינשוף (אופציונלי)
+        </h4>
+        <div className="grid grid-cols-3 gap-2">
+          <select value={traineeFilter} onChange={e => setTraineeFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
+            <option value="">כל המתורגלות</option>
+            {uniqueTrainees.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select value={postFilter} onChange={e => setPostFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
+            <option value="">כל העמדות</option>
+            {uniquePosts.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className={theme.input.select + " py-1.5 text-xs"}>
+            <option value="">כל הסוגים</option>
+            {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <input 
+          type="text" 
+          placeholder="טקסט חופשי לסינון (למשל: יום אויב, לייזר...)" 
+          value={customContext} 
+          onChange={e => setCustomContext(e.target.value)} 
+          className={theme.input.base + " py-1.5 text-xs"}
+        />
+      </div>
 
       {/* Input */}
       <div className="relative mb-6">

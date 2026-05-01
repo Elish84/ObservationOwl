@@ -21,10 +21,33 @@ exports.askOwl = onCall(async (request) => {
       return { answer: "אין מספיק מידע במערכת כדי לענות על שאלתך כרגע." };
     }
 
-    const reports = reportsSnapshot.docs.map(doc => doc.data());
+    let reports = reportsSnapshot.docs.map(doc => doc.data());
     
+    // Apply filters from client
+    if (filters) {
+      if (filters.trainee) {
+        reports = reports.filter(r => r.traineeName === filters.trainee);
+      }
+      if (filters.post) {
+        reports = reports.filter(r => r.observationPostName === filters.post);
+      }
+      if (filters.type) {
+        reports = reports.filter(r => r.practiceType === filters.type);
+      }
+      if (filters.customContext) {
+        const ctx = filters.customContext.toLowerCase();
+        reports = reports.filter(r => 
+          JSON.stringify(r).toLowerCase().includes(ctx)
+        );
+      }
+    }
+
+    if (reports.length === 0) {
+      return { answer: "לא נמצאו תרגולים המתאימים לסינון שבחרת." };
+    }
+
     // Filtering down to a limited context so we don't overflow context windows
-    const recentReports = reports.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).slice(0, 50);
+    const recentReports = reports.sort((a,b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0)).slice(0, 50);
 
     const dataContext = recentReports.map(r => {
       let metricStr = '';
@@ -36,7 +59,7 @@ exports.askOwl = onCall(async (request) => {
       }
       const preserve = r.preservationPoints ? r.preservationPoints.filter(p => p.trim() !== '').join(', ') : 'אין';
       const improve = r.improvementPoints ? r.improvementPoints.filter(p => p.trim() !== '').join(', ') : 'אין';
-      return `תאריך: ${r.date}, סוג: ${r.practiceType || 'רגיל'}, תצפית: ${r.observationPostName}, מתווה: ${r.exerciseOutline}${metricStr}, לשימור: ${preserve || 'אין'}, לשיפור: ${improve || 'אין'}`;
+      return `תאריך: ${r.date}, סוג: ${r.practiceType || 'רגיל'}, תצפית: ${r.observationPostName}, תצפיתנית: ${r.traineeName}, מתווה: ${r.exerciseOutline}${metricStr}, לשימור: ${preserve || 'אין'}, לשיפור: ${improve || 'אין'}`;
     }).join('\n');
 
     const apiKey = process.env.OPENAI_API_KEY;
