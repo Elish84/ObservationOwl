@@ -1,6 +1,6 @@
 import React from 'react';
 import theme from '../theme';
-import { Bird, LogOut, User as UserIcon } from 'lucide-react';
+import { Bird, LogOut, User as UserIcon, Share2 } from 'lucide-react';
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,11 @@ export default function Header({ user, isAdmin }) {
     navigate('/');
   };
 
+  const handleShare = () => {
+    const text = 'הצטרפו לינשוף לתצפיות:\n' + window.location.origin;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
   return (
     <header className={theme.header.wrapper}>
       <Bird className={theme.header.icon} />
@@ -22,6 +27,10 @@ export default function Header({ user, isAdmin }) {
       </div>
       
       <div className="mr-auto flex items-center gap-2">
+        <button onClick={handleShare} className="flex items-center gap-1 text-xs bg-background/20 px-2 py-1.5 rounded-lg hover:bg-background/40 text-primary-foreground transition-colors">
+          <Share2 size={14} />
+          שיתוף
+        </button>
         {user ? (
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-end">

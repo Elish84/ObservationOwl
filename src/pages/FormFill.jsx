@@ -8,12 +8,20 @@ export default function FormFill() {
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     time: new Date().toTimeString().split(' ')[0].slice(0, 5),
-    formType: '',
+    practiceType: '',
     tutorName: '',
     traineeName: '',
     observationPost: '',
     additionalObservationPost: '',
     exerciseOutline: '',
+    metrics: {
+      'התמצאות והזדטרות': 'לא רלוונטי',
+      'איכות הכוונת הכוח (כיוונים , רדיפות)': 'לא רלוונטי',
+      'תקשורת מול הכוח (רציפות ואיכות)': 'לא רלוונטי',
+      'הכרת המרחב': 'לא רלוונטי',
+      'עבודה נכונה עם האמצעי': 'לא רלוונטי',
+      'שת"פ עם עמדות נוספות': 'לא רלוונטי'
+    },
     jointForces: false,
     jointForcesFramework: '',
     jointForcesDetails: '',
@@ -24,7 +32,6 @@ export default function FormFill() {
     freeComments: ''
   });
 
-  const [formTypes, setFormTypes] = useState([]);
   const [posts, setPosts] = useState([]);
   const [frameworks, setFrameworks] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,15 +41,12 @@ export default function FormFill() {
     // Fetch active form types and posts
     const fetchDropdowns = async () => {
       try {
-        const typesSnap = await getDocs(query(collection(db, 'formTypes'), where('active', '==', true)));
         const postsSnap = await getDocs(query(collection(db, 'observationPosts'), where('active', '==', true)));
         const fwSnap = await getDocs(query(collection(db, 'frameworks'), where('active', '==', true)));
         
-        const typesData = typesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const postsData = postsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const fwData = fwSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         
-        setFormTypes(typesData);
         setPosts(postsData);
         setFrameworks(fwData);
       } catch (err) {
@@ -66,6 +70,10 @@ export default function FormFill() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.practiceType) {
+      alert("נא לבחור סוג תרגול");
+      return;
+    }
     setIsSubmitting(true);
     try {
       // 1. Save to Firestore
@@ -73,7 +81,6 @@ export default function FormFill() {
         ...formData,
         createdAt: new Date(),
         updatedAt: new Date(),
-        formTypeName: formTypes.find(t => t.id === formData.formType)?.name || formData.formType || "רגיל",
         observationPostName: posts.find(p => p.id === formData.observationPost)?.name || formData.observationPost || "כללי",
         jointForcesFrameworkName: formData.jointForcesFramework ? (frameworks.find(f => f.id === formData.jointForcesFramework)?.name || formData.jointForcesFramework) : "",
       };
@@ -83,13 +90,34 @@ export default function FormFill() {
       const filledPreservation = formData.preservationPoints.filter(p => p.trim() !== '');
       const filledImprovement = formData.improvementPoints.filter(p => p.trim() !== '');
 
+      let metricsText = '';
+      if (formData.practiceType === 'תרגול בחניכה') {
+        const measured = Object.values(formData.metrics).filter(v => v !== 'לא רלוונטי');
+        let scoreText = '';
+        if (measured.length > 0) {
+          const sum = measured.reduce((a, b) => a + parseInt(b), 0);
+          const normalizedScore = Math.round((sum / measured.length) * 20);
+          scoreText = `\n📊 *ציון תרגול:* ${normalizedScore} מתוך 100`;
+        }
+        
+        metricsText = `\n📉 *מדדי ביצוע:*\n`;
+        Object.entries(formData.metrics).forEach(([key, value]) => {
+          metricsText += `- ${key}: ${value}\n`;
+        });
+        if (scoreText) {
+          metricsText += scoreText + '\n\n';
+        } else {
+          metricsText += '\n';
+        }
+      }
+
       const text = `🦉 *סיכום תרגול תצפית*
 
 📅 *תאריך:* ${formData.date}
 🕒 *שעה:* ${formData.time}
-${reportData.formTypeName && reportData.formTypeName !== 'רגיל' ? `📋 *סוג טופס:* ${reportData.formTypeName}\n` : ''}👤 *שם התצפיתנית:* ${formData.traineeName}
-${formData.tutorName ? `👤 *שם החונכת:* ${formData.tutorName}\n` : ''}📍 *עמדת תצפית:* ${reportData.observationPostName}
-${formData.additionalObservationPost ? `📌 *תצפית נוספת:* ${formData.additionalObservationPost}\n` : ''}${formData.exerciseOutline ? `🎯 *מתווה התרגיל:*\n${formData.exerciseOutline}\n\n` : ''}🤝 *כוחות משולבים:* ${formData.jointForces ? 'כן' : 'לא'}
+${formData.practiceType ? `📋 *סוג תרגול:* ${formData.practiceType}\n` : ''}👤 *שם התצפיתנית:* ${formData.traineeName}
+${formData.practiceType === 'תרגול בחניכה' && formData.tutorName ? `👤 *שם החונכת:* ${formData.tutorName}\n` : ''}📍 *עמדת תצפית:* ${reportData.observationPostName}
+${formData.additionalObservationPost ? `📌 *תצפית נוספת:* ${formData.additionalObservationPost}\n` : ''}${formData.exerciseOutline ? `🎯 *מתווה התרגיל:*\n${formData.exerciseOutline}\n\n` : ''}${metricsText}🤝 *כוחות משולבים:* ${formData.jointForces ? 'כן' : 'לא'}
 ${formData.jointForces && formData.jointForcesDetails ? `*פירוט כוח:* ${formData.jointForcesDetails} ${reportData.jointForcesFrameworkName ? `(מסגרת: ${reportData.jointForcesFrameworkName})` : ''}\n` : ''}🎭 *ביום אויב:* ${formData.enemySimulation ? 'כן' : 'לא'}
 🔦 *שימוש בסמן לייזר:* ${formData.laserPointerUsage ? 'כן' : 'לא'}
 
@@ -105,12 +133,20 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
         setFormData({
           date: new Date().toISOString().split('T')[0],
           time: new Date().toTimeString().split(' ')[0].slice(0, 5),
-          formType: '',
+          practiceType: '',
           tutorName: '',
           traineeName: '',
           observationPost: '',
           additionalObservationPost: '',
           exerciseOutline: '',
+          metrics: {
+            'התמצאות והזדטרות': 'לא רלוונטי',
+            'איכות הכוונת הכוח (כיוונים , רדיפות)': 'לא רלוונטי',
+            'תקשורת מול הכוח (רציפות ואיכות)': 'לא רלוונטי',
+            'הכרת המרחב': 'לא רלוונטי',
+            'עבודה נכונה עם האמצעי': 'לא רלוונטי',
+            'שת"פ עם עמדות נוספות': 'לא רלוונטי'
+          },
           jointForces: false,
           jointForcesFramework: '',
           jointForcesDetails: '',
@@ -130,6 +166,35 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const renderMetric = (label) => {
+    return (
+      <div key={label} className="space-y-1 mt-3">
+        <label className={theme.label.xs}>{label}</label>
+        <div className="flex gap-1">
+          {['1', '2', '3', '4', '5', 'לא רלוונטי'].map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => {
+                setFormData(prev => ({
+                  ...prev,
+                  metrics: { ...prev.metrics, [label]: opt }
+                }))
+              }}
+              className={`flex-1 py-1.5 rounded text-xs font-medium transition-colors ${
+                formData.metrics[label] === opt 
+                  ? opt === 'לא רלוונטי' ? 'bg-muted text-muted-foreground border border-transparent' : 'bg-secondary text-secondary-foreground border border-transparent'
+                  : 'bg-background border border-border text-foreground hover:bg-muted'
+              }`}
+            >
+              {opt === 'לא רלוונטי' ? 'ל/ר' : opt}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -155,19 +220,20 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className={theme.label.base}>סוג טופס <span className="text-destructive">*</span></label>
-            <select required value={formData.formType} onChange={e => handleChange('formType', e.target.value)} className={theme.input.select}>
-              <option value="" disabled>בחר סוג טופס</option>
-              {formTypes.length === 0 && <option value="רגיל">רגיל (ברירת מחדל)</option>}
-              {formTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
+          <div className="space-y-2">
+            <label className={theme.label.base}>סוג תרגול? <span className="text-destructive">*</span></label>
+            <div className={theme.yesNo.wrapper}>
+              <button type="button" onClick={() => handleChange('practiceType', 'תרגול עצמי')} className={formData.practiceType === 'תרגול עצמי' ? theme.yesNo.yes : theme.yesNo.inactive}>תרגול עצמי</button>
+              <button type="button" onClick={() => handleChange('practiceType', 'תרגול בחניכה')} className={formData.practiceType === 'תרגול בחניכה' ? theme.yesNo.no : theme.yesNo.inactive}>תרגול בחניכה</button>
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <label className={theme.label.base}>שם החונכת</label>
-            <input type="text" placeholder="הכנס שם מלא" value={formData.tutorName} onChange={e => handleChange('tutorName', e.target.value)} className={theme.input.base} />
-          </div>
+          {formData.practiceType === 'תרגול בחניכה' && (
+            <div className="space-y-1">
+              <label className={theme.label.base}>שם החונכת</label>
+              <input type="text" placeholder="הכנס שם מלא" value={formData.tutorName} onChange={e => handleChange('tutorName', e.target.value)} className={theme.input.base} />
+            </div>
+          )}
 
           <div className="space-y-1">
             <label className={theme.label.base}>שם התצפיתנית <span className="text-destructive">*</span></label>
@@ -192,6 +258,20 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
             <label className={theme.label.base}>מתווה התרגיל</label>
             <textarea placeholder="תאר את מתווה התרגיל בקצרה" value={formData.exerciseOutline} onChange={e => handleChange('exerciseOutline', e.target.value)} className={theme.input.textarea} />
           </div>
+
+          {formData.practiceType === 'תרגול בחניכה' && (
+            <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border">
+              <label className={theme.label.secondary}>מדדי ביצוע</label>
+              {[
+                'התמצאות והזדטרות',
+                'איכות הכוונת הכוח (כיוונים , רדיפות)',
+                'תקשורת מול הכוח (רציפות ואיכות)',
+                'הכרת המרחב',
+                'עבודה נכונה עם האמצעי',
+                'שת"פ עם עמדות נוספות'
+              ].map(renderMetric)}
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className={theme.label.base}>האם היו כוחות משולבים?</label>

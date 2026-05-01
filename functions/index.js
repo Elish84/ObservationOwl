@@ -4,6 +4,9 @@ const { OpenAI } = require("openai");
 
 admin.initializeApp();
 
+const { setGlobalOptions } = require("firebase-functions/v2");
+setGlobalOptions({ region: "me-west1" });
+
 exports.askOwl = onCall(async (request) => {
   try {
     const { question, filters } = request.data;
@@ -23,9 +26,18 @@ exports.askOwl = onCall(async (request) => {
     // Filtering down to a limited context so we don't overflow context windows
     const recentReports = reports.sort((a,b) => b.createdAt?.toMillis() - a.createdAt?.toMillis()).slice(0, 50);
 
-    const dataContext = recentReports.map(r => 
-      `תאריך: ${r.date}, תצפית: ${r.observationPostName}, מתווה: ${r.exerciseOutline}, נקודות לשימור: ${r.preservationPoints.join(', ')}, נקודות לשיפור: ${r.improvementPoints.join(', ')}`
-    ).join('\n');
+    const dataContext = recentReports.map(r => {
+      let metricStr = '';
+      if (r.metrics) {
+        const validMetrics = Object.entries(r.metrics).filter(([k,v]) => v !== 'לא רלוונטי');
+        if (validMetrics.length > 0) {
+          metricStr = ', מדדים: ' + validMetrics.map(([k,v]) => `${k} (${v})`).join(', ');
+        }
+      }
+      const preserve = r.preservationPoints ? r.preservationPoints.filter(p => p.trim() !== '').join(', ') : 'אין';
+      const improve = r.improvementPoints ? r.improvementPoints.filter(p => p.trim() !== '').join(', ') : 'אין';
+      return `תאריך: ${r.date}, סוג: ${r.practiceType || 'רגיל'}, תצפית: ${r.observationPostName}, מתווה: ${r.exerciseOutline}${metricStr}, לשימור: ${preserve || 'אין'}, לשיפור: ${improve || 'אין'}`;
+    }).join('\n');
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -49,6 +61,6 @@ exports.askOwl = onCall(async (request) => {
     return { answer: response.choices[0].message.content };
   } catch (error) {
     console.error("Error in askOwl function:", error);
-    return { error: "אירעה שגיאה בעיבוד השאלה. אנא ודא שהגדרת את סוד ה-OPENAI_API_KEY." };
+    return { error: `אירעה שגיאה: ${error.message || "שגיאה לא ידועה"}` };
   }
 });

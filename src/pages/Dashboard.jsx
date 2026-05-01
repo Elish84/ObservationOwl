@@ -71,20 +71,21 @@ export default function Dashboard() {
   const COLORS = ['#4ade80', '#a78bfa', '#fbbf24', '#f472b6', '#38bdf8', '#818cf8', '#34d399'];
 
   // Chart Data: Stacked Bar by Post
-  const uniqueFormTypes = [...new Set(filtered.map(r => r.formTypeName))];
+  const uniquePracticeTypes = [...new Set(filtered.map(r => r.practiceType || 'לא מוגדר'))];
   const postDataMap = {};
   filtered.forEach(r => {
     const post = r.observationPostName || 'כללי';
-    const type = r.formTypeName || 'רגיל';
+    const type = r.practiceType || 'לא מוגדר';
     if (!postDataMap[post]) postDataMap[post] = { name: post, total: 0 };
     postDataMap[post][type] = (postDataMap[post][type] || 0) + 1;
     postDataMap[post].total += 1;
   });
   const barData = Object.values(postDataMap).sort((a, b) => b.total - a.total);
 
-  // Chart Data: Donut by Form Type
+  // Chart Data: Donut by Practice Type
   const typeCounts = filtered.reduce((acc, r) => {
-    acc[r.formTypeName] = (acc[r.formTypeName] || 0) + 1;
+    const type = r.practiceType || 'לא מוגדר';
+    acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
   const pieData = Object.keys(typeCounts).map(k => ({ name: k, value: typeCounts[k] }));
@@ -186,7 +187,7 @@ export default function Dashboard() {
 
           {/* Charts */}
           <div className={theme.card.base + " p-4"}>
-            <h3 className="font-bold mb-4 text-sm text-center">התפלגות לפי עמדת תצפית וסוג טופס</h3>
+            <h3 className="font-bold mb-4 text-sm text-center">התפלגות לפי עמדת תצפית וסוג תרגול</h3>
             <div className="h-64" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={barData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
@@ -194,7 +195,7 @@ export default function Dashboard() {
                   <YAxis tick={{ fontSize: 10, fill: '#888' }} />
                   <Tooltip contentStyle={{ backgroundColor: '#1c2541', border: 'none', borderRadius: '8px', color: '#fff' }} />
                   <Legend wrapperStyle={{ fontSize: '10px' }} />
-                  {uniqueFormTypes.map((type, idx) => (
+                  {uniquePracticeTypes.map((type, idx) => (
                     <Bar 
                       key={type} 
                       dataKey={type} 
@@ -211,7 +212,7 @@ export default function Dashboard() {
           </div>
 
           <div className={theme.card.base + " p-4"}>
-            <h3 className="font-bold mb-4 text-sm">סוגי טפסים</h3>
+            <h3 className="font-bold mb-4 text-sm">סוגי תרגול</h3>
             <div className="h-48" dir="ltr">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>

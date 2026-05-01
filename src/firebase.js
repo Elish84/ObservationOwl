@@ -4,16 +4,16 @@ import { getAuth } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDG_-XAP-hzNVa6BtA34_YpYFeqE73L6mE",
-  authDomain: "project-4875540944725487473.firebaseapp.com",
-  projectId: "project-4875540944725487473",
-  storageBucket: "project-4875540944725487473.firebasestorage.app",
-  messagingSenderId: "266712033696",
-  appId: "1:266712033696:web:311179722317a1903e9cc5",
-  measurementId: "G-MFJ43LRCSQ"
+  apiKey: "AIzaSyBfP8VL2dPhXGs_8Nuce5Xik4HjC6sneiE",
+  authDomain: "shomron-6aba2.firebaseapp.com",
+  projectId: "shomron-6aba2",
+  storageBucket: "shomron-6aba2.firebasestorage.app",
+  messagingSenderId: "855372671262",
+  appId: "1:855372671262:web:b67541955f37c6be37410f",
+  measurementId: "G-J53ETYWPTP"
 };
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
-export const functions = getFunctions(app, 'us-central1'); // default region
+export const functions = getFunctions(app, 'me-west1'); // matched backend region

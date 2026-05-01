@@ -2,120 +2,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ===== פונקציות עזר =====
+    // ===== Helper Functions =====
     function signedIn() {
       return request.auth != null;
-    }
-
-    function isDivision() {
-      return signedIn() && request.auth.token.email == 'shomron@gmail.com';
     }
 
     function isAdmin() {
       return signedIn() &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-
-    function isManager() {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/manager/$(request.auth.uid));
-    }
-
-    function isDeveloper() {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/developers/$(request.auth.uid));
-    }
-
-    // פונקציה לבדיקה האם המשתמש משויך לתעסוקה ספציפית
-    function isAssignedTo(depId) {
-      return isAdmin() && 
-        get(/databases/$(database)/documents/deploymentsMap/$(request.auth.token.email.lower())).data.deployment == depId;
-    }
-
-    // =====================================================
-    // ============ PROJECT: DEPLOYMENTS (V5) ==============
-    // =====================================================
-    
-    // חוק הליבה: הפרדה מוחלטת לפי תעסוקה
-    match /deployments/{depId}/reviews/{docId} {
-      allow create: if isAdmin();
-      allow read: if isDivision() || isAssignedTo(depId);
-      allow update, delete: if isAdmin() && isAssignedTo(depId);
-    }
-
-    // תמיכה בשליפה רוחבית (חטיבה / AI)
-    match /{path=**}/reviews/{docId} {
-      allow read: if isDivision() || isAdmin();
-    }
-
-    // =====================================================
-    // ============ PROJECT: SECTOR EVENTS =================
-    // =====================================================
-    match /sectorEvents/{docId} {
-      allow create: if true;
-      allow read: if signedIn();
-      allow update, delete: if isAdmin() || isManager();
-    }
-
-    match /roles/{docId} {
-      allow read: if true;
-      allow create, update, delete: if isManager();
-    }
-
-    match /eventTypes/{docId} {
-      allow read: if true;
-      allow create, update, delete: if isManager();
-    }
-
-    // =====================================================
-    // ================= PROJECT: REVIEWS ==================
-    // =====================================================
-    match /reviews/{docId} {
-      allow create: if signedIn();
-      allow read: if isAdmin() || isDivision();
-      allow update, delete: if isAdmin();
-    }
-
-    // =====================================================
-    // ============== PROJECT: HOUSE SCANS =================
-    // =====================================================
-    match /houseScans/{docId} {
-      allow create: if true;
-      allow read: if isAdmin() || isDivision();
-      allow update, delete: if isAdmin();
-    }
-
-    // =====================================================
-    // =================== MAP PINS ========================
-    // =====================================================
-    match /mapPins/{docId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if isAdmin();
-    }
-
-    // =====================================================
-    // =================== PLACES ==========================
-    // =====================================================
-    match /places/{docId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin();
-    }
-
-    // =====================================================
-    // =================== SECTORS =========================
-    // =====================================================
-    match /sectors/{docId} {
-      allow read: if true;
-      allow create, update, delete: if isAdmin() || isManager();
-    }
-
-    // =====================================================
-    // ================= TZAMM CALENDAR ====================
-    // =====================================================
-    match /tzammCalendar/{docId} {
-      allow read: if true;
-      allow create, update: if true;
     }
 
     // =====================================================
@@ -125,37 +19,6 @@ service cloud.firestore {
       allow create: if signedIn() && request.auth.uid == uid;
       allow read: if signedIn() && request.auth.uid == uid;
       allow update, delete: if isAdmin();
-    }
-
-    match /deploymentsMap/{docId} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
-    // =====================================================
-    // ================== MANAGER =========================
-    // =====================================================
-    match /manager/{uid} {
-      allow create: if signedIn() && request.auth.uid == uid;
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow update, delete: if isManager();
-    }
-
-    // =====================================================
-    // ================= DEVELOPERS =======================
-    // =====================================================
-    match /developers/{uid} {
-      allow create: if signedIn() && request.auth.uid == uid;
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow update, delete: if isDeveloper();
-    }
-
-    // =====================================================
-    // =================== SETTINGS ========================
-    // =====================================================
-    match /settings/{docId} {
-      allow read: if true;
-      allow create, update, delete: if isDeveloper();
     }
 
     // =====================================================
