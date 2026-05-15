@@ -8,8 +8,10 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn() &&
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return signedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == "elishukrun84@gmail.com"
+      );
     }
 
     // =====================================================
@@ -17,7 +19,7 @@ service cloud.firestore {
     // =====================================================
     match /admins/{uid} {
       allow create: if signedIn() && request.auth.uid == uid;
-      allow read: if signedIn() && request.auth.uid == uid;
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 
@@ -35,6 +37,16 @@ service cloud.firestore {
     }
 
     match /frameworks/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sectors/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /observers/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }

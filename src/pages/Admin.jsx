@@ -11,12 +11,16 @@ export default function Admin({ isAdmin, user }) {
   const [formTypes, setFormTypes] = useState([]);
   const [posts, setPosts] = useState([]);
   const [frameworks, setFrameworks] = useState([]);
+  const [sectors, setSectors] = useState([]);
+  const [observers, setObservers] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // State for new items
   const [newFormType, setNewFormType] = useState('');
   const [newPost, setNewPost] = useState('');
   const [newFramework, setNewFramework] = useState('');
+  const [newSector, setNewSector] = useState('');
+  const [newObserver, setNewObserver] = useState('');
 
   // Login State
   const [email, setEmail] = useState('');
@@ -29,10 +33,14 @@ export default function Admin({ isAdmin, user }) {
       const typesSnap = await getDocs(query(collection(db, 'formTypes'), orderBy('createdAt', 'desc')));
       const postsSnap = await getDocs(query(collection(db, 'observationPosts'), orderBy('createdAt', 'desc')));
       const frameworksSnap = await getDocs(query(collection(db, 'frameworks'), orderBy('createdAt', 'desc')));
+      const sectorsSnap = await getDocs(query(collection(db, 'sectors'), orderBy('createdAt', 'desc')));
+      const observersSnap = await getDocs(query(collection(db, 'observers'), orderBy('createdAt', 'desc')));
       
       setFormTypes(typesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setPosts(postsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       setFrameworks(frameworksSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setSectors(sectorsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+      setObservers(observersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
     } catch (err) {
       console.error("Error fetching admin data", err);
     }
@@ -103,6 +111,36 @@ export default function Admin({ isAdmin, user }) {
       fetchAdminData();
     } catch (err) {
       console.error("Error adding framework", err);
+    }
+  };
+
+  const handleAddSector = async () => {
+    if (!newSector.trim()) return;
+    try {
+      await addDoc(collection(db, 'sectors'), {
+        name: newSector,
+        active: true,
+        createdAt: new Date()
+      });
+      setNewSector('');
+      fetchAdminData();
+    } catch (err) {
+      console.error("Error adding sector", err);
+    }
+  };
+
+  const handleAddObserver = async () => {
+    if (!newObserver.trim()) return;
+    try {
+      await addDoc(collection(db, 'observers'), {
+        name: newObserver,
+        active: true,
+        createdAt: new Date()
+      });
+      setNewObserver('');
+      fetchAdminData();
+    } catch (err) {
+      console.error("Error adding observer", err);
     }
   };
 
@@ -312,6 +350,82 @@ export default function Admin({ isAdmin, user }) {
                 </div>
               ))}
               {frameworks.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">אין מסגרות במערכת</p>}
+            </div>
+          </div>
+
+          {/* Sectors Admin */}
+          <div className={theme.card.base + " p-4"}>
+            <h3 className="font-bold mb-4 text-secondary">תאים</h3>
+            
+            <div className="flex gap-2 mb-4">
+              <input 
+                type="text" 
+                placeholder="הוסף תא חדש..." 
+                value={newSector} 
+                onChange={(e) => setNewSector(e.target.value)}
+                className={theme.input.base}
+              />
+              <button onClick={handleAddSector} className={theme.button.save + " px-4"}>
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {sectors.map(sector => (
+                <div key={sector.id} className={theme.admin.itemRow}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${sector.active ? 'bg-primary' : 'bg-destructive'}`}></span>
+                    <span className={sector.active ? 'text-foreground' : 'text-muted-foreground line-through'}>{sector.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggleActive('sectors', sector.id, sector.active)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                      {sector.active ? <X size={16} /> : <Check size={16} />}
+                    </button>
+                    <button onClick={() => handleDelete('sectors', sector.id)} className="p-1.5 text-destructive/70 hover:text-destructive">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {sectors.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">אין תאים במערכת</p>}
+            </div>
+          </div>
+
+          {/* Observers Admin */}
+          <div className={theme.card.base + " p-4"}>
+            <h3 className="font-bold mb-4 text-primary">תצפיתניות</h3>
+            
+            <div className="flex gap-2 mb-4">
+              <input 
+                type="text" 
+                placeholder="הוסף תצפיתנית חדשה..." 
+                value={newObserver} 
+                onChange={(e) => setNewObserver(e.target.value)}
+                className={theme.input.base}
+              />
+              <button onClick={handleAddObserver} className={theme.button.save + " px-4"}>
+                <Plus size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {observers.map(observer => (
+                <div key={observer.id} className={theme.admin.itemRow}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${observer.active ? 'bg-primary' : 'bg-destructive'}`}></span>
+                    <span className={observer.active ? 'text-foreground' : 'text-muted-foreground line-through'}>{observer.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => toggleActive('observers', observer.id, observer.active)} className="p-1.5 text-muted-foreground hover:text-foreground">
+                      {observer.active ? <X size={16} /> : <Check size={16} />}
+                    </button>
+                    <button onClick={() => handleDelete('observers', observer.id)} className="p-1.5 text-destructive/70 hover:text-destructive">
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {observers.length === 0 && <p className="text-sm text-muted-foreground text-center py-2">אין תצפיתניות במערכת</p>}
             </div>
           </div>
         </div>

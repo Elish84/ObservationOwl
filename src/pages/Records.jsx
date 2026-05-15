@@ -17,6 +17,15 @@ export default function Records() {
   const [editingRecord, setEditingRecord] = useState(null);
   const [editData, setEditData] = useState(null);
 
+  const calculateScore = (r) => {
+    if (r.score !== undefined && r.score !== null) return r.score;
+    if (!r.metrics) return 'N/A';
+    const measured = Object.values(r.metrics).filter(v => v !== 'לא רלוונטי');
+    if (measured.length === 0) return 'N/A';
+    const sum = measured.reduce((a, b) => a + parseInt(b), 0);
+    return Math.round((sum / measured.length) * 20);
+  };
+
   const fetchRecords = async () => {
     setLoading(true);
     try {
@@ -56,10 +65,12 @@ export default function Records() {
 📅 *תאריך:* ${r.date}
 🕒 *שעה:* ${r.time}
 ${r.formTypeName && r.formTypeName !== 'רגיל' ? `📋 *סוג טופס:* ${r.formTypeName}\n` : ''}👤 *שם התצפיתנית:* ${r.traineeName}
-${r.tutorName ? `👤 *שם החונכת:* ${r.tutorName}\n` : ''}📍 *עמדת תצפית:* ${r.observationPostName}
+${r.tutorName ? `👤 *שם החונכת:* ${r.tutorName}\n` : ''}📍 *תא:* ${r.sectorName || ''}
+📍 *עמדת תצפית:* ${r.observationPostName}
 ${r.additionalObservationPost ? `📌 *תצפית נוספת:* ${r.additionalObservationPost}\n` : ''}${r.exerciseOutline ? `🎯 *מתווה התרגיל:*\n${r.exerciseOutline}\n\n` : ''}🤝 *כוחות משולבים:* ${r.jointForces ? 'כן' : 'לא'}
 ${r.jointForces && r.jointForcesDetails ? `*פירוט כוח:* ${r.jointForcesDetails} ${r.jointForcesFrameworkName ? `(מסגרת: ${r.jointForcesFrameworkName})` : ''}\n` : ''}🎭 *ביום אויב:* ${r.enemySimulation ? 'כן' : 'לא'}
 🔦 *שימוש בסמן לייזר:* ${r.laserPointerUsage ? 'כן' : 'לא'}
+🎯 *הכוונה בשטח:* ${r.fieldGuidance ? 'כן' : 'לא'}
 
 ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPreservation.map((p, i) => `${i+1}. ${p}`).join('\n')}\n\n` : ''}${filledImprovement.length > 0 ? `🔧 *נקודות לשיפור:*\n${filledImprovement.map((p, i) => `${i+1}. ${p}`).join('\n')}\n\n` : ''}${r.freeComments ? `📝 *הערות נוספות:*\n${r.freeComments}` : ''}`;
     const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
@@ -69,14 +80,16 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
   const handleExportCSV = () => {
     if (filteredRecords.length === 0) return;
     
-    const headers = ['תאריך', 'שעה', 'תצפיתנית', 'חונכת', 'עמדה', 'סוג תרגול', 'מתווה', 'נקודות לשימור', 'נקודות לשיפור', 'הערות'];
+    const headers = ['תאריך', 'שעה', 'תצפיתנית', 'חונכת', 'עמדה', 'תא', 'סוג תרגול', 'הכוונה בשטח', 'מתווה', 'נקודות לשימור', 'נקודות לשיפור', 'הערות'];
     const rows = filteredRecords.map(r => [
       r.date,
       r.time,
       r.traineeName,
       r.tutorName || '',
       r.observationPostName,
+      r.sectorName || '',
       r.practiceType || '',
+      r.fieldGuidance ? 'כן' : 'לא',
       `"${(r.exerciseOutline || '').replace(/"/g, '""')}"`,
       `"${(r.preservationPoints || []).join(' ; ').replace(/"/g, '""')}"`,
       `"${(r.improvementPoints || []).join(' ; ').replace(/"/g, '""')}"`,
@@ -140,7 +153,11 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
         <div className="space-y-4 bg-card p-4 rounded-xl shadow-md border border-border">
           <input type="text" placeholder="שם החונכת" value={editData.tutorName || ''} onChange={e => setEditData({...editData, tutorName: e.target.value})} className={theme.input.base} />
           <input type="text" placeholder="שם התצפיתנית" value={editData.traineeName} onChange={e => setEditData({...editData, traineeName: e.target.value})} className={theme.input.base} />
-          <input type="date" value={editData.date} onChange={e => setEditData({...editData, date: e.target.value})} className={theme.input.base} />
+          <input type="text" placeholder="תא" value={editData.sectorName || ''} onChange={e => setEditData({...editData, sectorName: e.target.value})} className={theme.input.base} />
+          <div className="flex gap-2">
+            <input type="date" value={editData.date} onChange={e => setEditData({...editData, date: e.target.value})} className={theme.input.base + " flex-1"} />
+            <input type="time" value={editData.time} onChange={e => setEditData({...editData, time: e.target.value})} className={theme.input.base + " flex-1"} />
+          </div>
           <textarea placeholder="מתווה" value={editData.exerciseOutline} onChange={e => setEditData({...editData, exerciseOutline: e.target.value})} className={theme.input.textarea} />
           
           <div className="space-y-2">
@@ -228,10 +245,21 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
                 >
                   <div className="flex flex-1 items-center gap-3 min-w-0">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-foreground text-sm truncate">{r.traineeName}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-foreground text-sm truncate">{r.traineeName}</h3>
+                        {r.practiceType === 'תרגול בחניכה' && (
+                          <span className="text-[9px] bg-secondary/10 text-secondary px-1.5 py-0.5 rounded-full font-bold">בחניכה</span>
+                        )}
+                        {r.practiceType === 'תרגול עצמי' && (
+                          <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-bold">עצמי</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] text-muted-foreground">{r.date}</span>
+                        <span className="text-[10px] text-muted-foreground">{r.date} • {r.time}</span>
                         <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm">{r.observationPostName}</span>
+                        {r.practiceType === 'תרגול בחניכה' && (
+                          <span className="text-[10px] font-bold text-secondary">ציון: {calculateScore(r)}</span>
+                        )}
                       </div>
                     </div>
                     <p className="text-[11px] text-muted-foreground truncate hidden sm:block max-w-[40%]">{r.exerciseOutline}</p>
@@ -245,11 +273,16 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
                 {isExpanded && (
                   <div className="p-4 border-t border-border bg-muted/5 space-y-4">
                     <div className="space-y-2">
+                      <p className="text-sm"><strong>סוג תרגול:</strong> {r.practiceType || 'לא מוגדר'}</p>
+                      {r.practiceType === 'תרגול בחניכה' && <p className="text-sm font-bold text-secondary"><strong>ציון תרגול:</strong> {calculateScore(r)}</p>}
                       {r.tutorName && <p className="text-sm"><strong>חונכת:</strong> {r.tutorName}</p>}
+                      <p className="text-sm"><strong>זמן:</strong> {r.date} בשעה {r.time}</p>
                       {r.exerciseOutline && <p className="text-sm"><strong>מתווה:</strong> {r.exerciseOutline}</p>}
+                      {r.sectorName && <p className="text-sm"><strong>תא:</strong> {r.sectorName}</p>}
                       <p className="text-sm"><strong>כוחות משולבים:</strong> {r.jointForces ? `כן (${r.jointForcesDetails}${r.jointForcesFrameworkName ? ` - ${r.jointForcesFrameworkName}` : ''})` : 'לא'}</p>
                       <p className="text-sm"><strong>ביום אויב:</strong> {r.enemySimulation ? 'כן' : 'לא'}</p>
                       <p className="text-sm"><strong>סמן לייזר:</strong> {r.laserPointerUsage ? 'כן' : 'לא'}</p>
+                      <p className="text-sm"><strong>הכוונה בשטח:</strong> {r.fieldGuidance ? 'כן' : 'לא'}</p>
                       {r.additionalObservationPost && <p className="text-sm"><strong>תצפית נוספת:</strong> {r.additionalObservationPost}</p>}
                     </div>
                     

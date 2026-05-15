@@ -24,10 +24,10 @@ function App() {
       if (currentUser) {
         try {
           const adminDoc = await getDoc(doc(db, 'admins', currentUser.uid));
-          setIsAdmin(adminDoc.exists());
+          setIsAdmin(adminDoc.exists() || currentUser.email === 'elishukrun84@gmail.com');
         } catch (e) {
           console.error("Error checking admin status:", e);
-          setIsAdmin(false);
+          setIsAdmin(currentUser.email === 'elishukrun84@gmail.com');
         }
       } else {
         setIsAdmin(false);

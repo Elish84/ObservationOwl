@@ -13,6 +13,7 @@ export default function FormFill() {
     traineeName: '',
     observationPost: '',
     additionalObservationPost: '',
+    sector: '',
     exerciseOutline: '',
     metrics: {
       'התמצאות והזדטרות': 'לא רלוונטי',
@@ -27,6 +28,7 @@ export default function FormFill() {
     jointForcesDetails: '',
     enemySimulation: false,
     laserPointerUsage: false,
+    fieldGuidance: false,
     preservationPoints: ['', '', ''],
     improvementPoints: ['', '', ''],
     freeComments: ''
@@ -34,6 +36,8 @@ export default function FormFill() {
 
   const [posts, setPosts] = useState([]);
   const [frameworks, setFrameworks] = useState([]);
+  const [sectors, setSectors] = useState([]);
+  const [observers, setObservers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(null); // stores { text, waUrl }
 
@@ -43,12 +47,13 @@ export default function FormFill() {
       try {
         const postsSnap = await getDocs(query(collection(db, 'observationPosts'), where('active', '==', true)));
         const fwSnap = await getDocs(query(collection(db, 'frameworks'), where('active', '==', true)));
+        const sectorsSnap = await getDocs(query(collection(db, 'sectors'), where('active', '==', true)));
+        const observersSnap = await getDocs(query(collection(db, 'observers'), where('active', '==', true)));
         
-        const postsData = postsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const fwData = fwSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        setPosts(postsData);
-        setFrameworks(fwData);
+        setPosts(postsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setFrameworks(fwSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setSectors(sectorsSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setObservers(observersSnap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) {
         console.error("Error fetching dropdowns", err);
       }
@@ -76,28 +81,15 @@ export default function FormFill() {
     }
     setIsSubmitting(true);
     try {
-      // 1. Save to Firestore
-      const reportData = {
-        ...formData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        observationPostName: posts.find(p => p.id === formData.observationPost)?.name || formData.observationPost || "כללי",
-        jointForcesFrameworkName: formData.jointForcesFramework ? (frameworks.find(f => f.id === formData.jointForcesFramework)?.name || formData.jointForcesFramework) : "",
-      };
-      await addDoc(collection(db, 'observationTrainingReports'), reportData);
-
-      // 2. Generate WhatsApp URL
-      const filledPreservation = formData.preservationPoints.filter(p => p.trim() !== '');
-      const filledImprovement = formData.improvementPoints.filter(p => p.trim() !== '');
-
       let metricsText = '';
+      let calculatedScore = null;
       if (formData.practiceType === 'תרגול בחניכה') {
         const measured = Object.values(formData.metrics).filter(v => v !== 'לא רלוונטי');
         let scoreText = '';
         if (measured.length > 0) {
           const sum = measured.reduce((a, b) => a + parseInt(b), 0);
-          const normalizedScore = Math.round((sum / measured.length) * 20);
-          scoreText = `\n📊 *ציון תרגול:* ${normalizedScore} מתוך 100`;
+          calculatedScore = Math.round((sum / measured.length) * 20);
+          scoreText = `\n📊 *ציון תרגול:* ${calculatedScore} מתוך 100`;
         }
         
         metricsText = `\n📉 *מדדי ביצוע:*\n`;
@@ -111,15 +103,32 @@ export default function FormFill() {
         }
       }
 
+      // 1. Save to Firestore
+      const reportData = {
+        ...formData,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        score: calculatedScore,
+        observationPostName: posts.find(p => p.id === formData.observationPost)?.name || formData.observationPost || "כללי",
+        sectorName: sectors.find(s => s.id === formData.sector)?.name || formData.sector || "",
+        jointForcesFrameworkName: formData.jointForcesFramework ? (frameworks.find(f => f.id === formData.jointForcesFramework)?.name || formData.jointForcesFramework) : "",
+      };
+      await addDoc(collection(db, 'observationTrainingReports'), reportData);
+
+      const filledPreservation = formData.preservationPoints.filter(p => p.trim() !== '');
+      const filledImprovement = formData.improvementPoints.filter(p => p.trim() !== '');
+
       const text = `🦉 *סיכום תרגול תצפית*
 
 📅 *תאריך:* ${formData.date}
 🕒 *שעה:* ${formData.time}
 ${formData.practiceType ? `📋 *סוג תרגול:* ${formData.practiceType}\n` : ''}👤 *שם התצפיתנית:* ${formData.traineeName}
-${formData.practiceType === 'תרגול בחניכה' && formData.tutorName ? `👤 *שם החונכת:* ${formData.tutorName}\n` : ''}📍 *עמדת תצפית:* ${reportData.observationPostName}
+${formData.practiceType === 'תרגול בחניכה' && formData.tutorName ? `👤 *שם החונכת:* ${formData.tutorName}\n` : ''}📍 *תא:* ${reportData.sectorName}
+📍 *עמדת תצפית:* ${reportData.observationPostName}
 ${formData.additionalObservationPost ? `📌 *תצפית נוספת:* ${formData.additionalObservationPost}\n` : ''}${formData.exerciseOutline ? `🎯 *מתווה התרגיל:*\n${formData.exerciseOutline}\n\n` : ''}${metricsText}🤝 *כוחות משולבים:* ${formData.jointForces ? 'כן' : 'לא'}
 ${formData.jointForces && formData.jointForcesDetails ? `*פירוט כוח:* ${formData.jointForcesDetails} ${reportData.jointForcesFrameworkName ? `(מסגרת: ${reportData.jointForcesFrameworkName})` : ''}\n` : ''}🎭 *ביום אויב:* ${formData.enemySimulation ? 'כן' : 'לא'}
 🔦 *שימוש בסמן לייזר:* ${formData.laserPointerUsage ? 'כן' : 'לא'}
+🎯 *הכוונה בשטח:* ${formData.fieldGuidance ? 'כן' : 'לא'}
 
 ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPreservation.map((p, i) => `${i+1}. ${p}`).join('\n')}\n\n` : ''}${filledImprovement.length > 0 ? `🔧 *נקודות לשיפור:*\n${filledImprovement.map((p, i) => `${i+1}. ${p}`).join('\n')}\n\n` : ''}${formData.freeComments ? `📝 *הערות נוספות:*\n${formData.freeComments}` : ''}`;
 
@@ -211,6 +220,7 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
                   jointForcesDetails: '',
                   enemySimulation: false,
                   laserPointerUsage: false,
+                  fieldGuidance: false,
                   preservationPoints: ['', '', ''],
                   improvementPoints: ['', '', ''],
                   freeComments: ''
@@ -248,13 +258,27 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
           {formData.practiceType === 'תרגול בחניכה' && (
             <div className="space-y-1">
               <label className={theme.label.base}>שם החונכת</label>
-              <input type="text" placeholder="הכנס שם מלא" value={formData.tutorName} onChange={e => handleChange('tutorName', e.target.value)} className={theme.input.base} />
+              <select value={formData.tutorName} onChange={e => handleChange('tutorName', e.target.value)} className={theme.input.select}>
+                <option value="">בחר חונכת</option>
+                {observers.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
+              </select>
             </div>
           )}
 
           <div className="space-y-1">
             <label className={theme.label.base}>שם התצפיתנית <span className="text-destructive">*</span></label>
-            <input type="text" required placeholder="הכנס שם מלא" value={formData.traineeName} onChange={e => handleChange('traineeName', e.target.value)} className={theme.input.base} />
+            <select required value={formData.traineeName} onChange={e => handleChange('traineeName', e.target.value)} className={theme.input.select}>
+              <option value="" disabled>בחר תצפיתנית</option>
+              {observers.map(o => <option key={o.id} value={o.name}>{o.name}</option>)}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className={theme.label.base}>תא <span className="text-destructive">*</span></label>
+            <select required value={formData.sector} onChange={e => handleChange('sector', e.target.value)} className={theme.input.select}>
+              <option value="" disabled>בחר תא</option>
+              {sectors.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
           </div>
 
           <div className="space-y-1">
@@ -324,6 +348,14 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
             <div className={theme.yesNo.wrapper}>
               <button type="button" onClick={() => handleChange('laserPointerUsage', true)} className={formData.laserPointerUsage ? theme.yesNo.yes : theme.yesNo.inactive}>כן</button>
               <button type="button" onClick={() => handleChange('laserPointerUsage', false)} className={!formData.laserPointerUsage ? theme.yesNo.no : theme.yesNo.inactive}>לא</button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className={theme.label.base}>האם בוצע הכוונה בשטח?</label>
+            <div className={theme.yesNo.wrapper}>
+              <button type="button" onClick={() => handleChange('fieldGuidance', true)} className={formData.fieldGuidance ? theme.yesNo.yes : theme.yesNo.inactive}>כן</button>
+              <button type="button" onClick={() => handleChange('fieldGuidance', false)} className={!formData.fieldGuidance ? theme.yesNo.no : theme.yesNo.inactive}>לא</button>
             </div>
           </div>
 
