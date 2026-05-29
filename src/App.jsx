@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import BottomNav from './components/BottomNav';
 import InstallPrompt from './components/InstallPrompt';
+import ReloadPrompt from './components/ReloadPrompt';
 import Header from './components/Header';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
@@ -46,6 +47,7 @@ function App() {
       <div className="min-h-screen bg-background text-foreground font-heebo">
         <Header user={user} isAdmin={isAdmin} />
         <InstallPrompt />
+        <ReloadPrompt />
         <main className="pb-20">
           <React.Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background text-primary">טוען דף...</div>}>
             <Routes>

@@ -22,7 +22,12 @@ export default function Header({ user, isAdmin }) {
     <header className={theme.header.wrapper}>
       <Bird className={theme.header.icon} />
       <div>
-        <h1 className={theme.header.title}>ינשוף לתצפיות</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className={theme.header.title}>ינשוף לתצפיות</h1>
+          <span className="text-[10px] bg-primary/20 text-primary-foreground px-1.5 py-0.5 rounded font-mono">
+            v{__APP_VERSION__}
+          </span>
+        </div>
         <p className={theme.header.subtitle}>מערכת תרגול וניהול</p>
       </div>
       
