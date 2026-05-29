@@ -40,6 +40,8 @@ export default function FormFill() {
   const [observers, setObservers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(null); // stores { text, waUrl }
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationMessage, setValidationMessage] = useState({ title: '', text: '' });
 
   useEffect(() => {
     // Fetch active form types and posts
@@ -73,12 +75,37 @@ export default function FormFill() {
     });
   };
 
-  const handleSubmit = async (e) => {
+  const handlePreSubmit = (e) => {
     e.preventDefault();
     if (!formData.practiceType) {
       alert("נא לבחור סוג תרגול");
       return;
     }
+
+    const allPoints = [...formData.preservationPoints, ...formData.improvementPoints].join(' ');
+    const totalWords = allPoints.trim().split(/\s+/).filter(word => word.length > 0).length;
+
+    if (totalWords === 0) {
+      setValidationMessage({
+        title: 'רגע רגע... 🦉',
+        text: 'שום נקודה לשימור או לשיפור? המפקדת מסתכלת... חשוב להפיק לקחים כדי להשתפר באמת.'
+      });
+      setShowValidationModal(true);
+      return;
+    } else if (totalWords <= 3) {
+      setValidationMessage({
+        title: 'קצר ולעניין? 📝',
+        text: 'זה נחמד, אבל מילה או שתיים לא באמת יעזרו להשתפר במשמרת הבאה. כדאי לפרט קצת יותר!'
+      });
+      setShowValidationModal(true);
+      return;
+    }
+
+    executeSubmit();
+  };
+
+  const executeSubmit = async () => {
+    setShowValidationModal(false);
     setIsSubmitting(true);
     try {
       let metricsText = '';
@@ -235,7 +262,34 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handlePreSubmit} className="space-y-6">
+          
+          {/* Validation Modal */}
+          {showValidationModal && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+              <div className="bg-card w-full max-w-sm rounded-2xl p-6 shadow-2xl border border-border animate-in fade-in zoom-in duration-200">
+                <h3 className="text-xl font-bold text-foreground mb-2">{validationMessage.title}</h3>
+                <p className="text-muted-foreground mb-6 text-sm">{validationMessage.text}</p>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    type="button"
+                    onClick={() => setShowValidationModal(false)}
+                    className={theme.button.primary + " w-full py-3 font-bold"}
+                  >
+                    חזרה לפירוט ✍️
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={executeSubmit}
+                    className="text-muted-foreground hover:text-foreground text-sm font-medium py-2 transition-colors"
+                  >
+                    שליחה בכל זאת
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex gap-4">
             <div className="flex-1 space-y-1">
               <label className={theme.label.base}>תאריך</label>
@@ -361,15 +415,24 @@ ${filledPreservation.length > 0 ? `✅ *נקודות לשימור:*\n${filledPre
 
           <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border">
             <label className={theme.label.secondary}>נקודות לשימור</label>
-            {[0, 1, 2].map(i => (
-              <input key={`preserve-${i}`} type="text" placeholder={`נקודה ${i+1}`} value={formData.preservationPoints[i]} onChange={e => handleArrayChange('preservationPoints', i, e.target.value)} className={theme.input.base} />
+            {[
+              "מה עשיתי ממש טוב הפעם?",
+              "טכניקה שעבדה לי מעולה...",
+              "עוד נקודה חיובית..."
+            ].map((placeholder, i) => (
+              <input key={`preserve-${i}`} type="text" placeholder={placeholder} value={formData.preservationPoints[i]} onChange={e => handleArrayChange('preservationPoints', i, e.target.value)} className={theme.input.base} />
             ))}
+            <p className="text-[10px] text-muted-foreground px-1">פירוט של 3 מילים לפחות עוזר להשתפר!</p>
           </div>
 
           <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border">
             <label className={theme.label.accent}>נקודות לשיפור</label>
-            {[0, 1, 2].map(i => (
-              <input key={`improve-${i}`} type="text" placeholder={`נקודה ${i+1}`} value={formData.improvementPoints[i]} onChange={e => handleArrayChange('improvementPoints', i, e.target.value)} className={theme.input.base} />
+            {[
+              "על מה כדאי לשים דגש בפעם הבאה?",
+              "משהו שהייתי יכולה לעשות אחרת...",
+              "עוד נקודה לחידוד..."
+            ].map((placeholder, i) => (
+              <input key={`improve-${i}`} type="text" placeholder={placeholder} value={formData.improvementPoints[i]} onChange={e => handleArrayChange('improvementPoints', i, e.target.value)} className={theme.input.base} />
             ))}
           </div>
 
